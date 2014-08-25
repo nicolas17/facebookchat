@@ -76,6 +76,27 @@ class FacebookChat:
 
         return resp_json["buddy_list"]["nowAvailableList"]
 
+    def notifyTyping(self, userid, typing):
+        print("Notifying user %d that we're %s" % (userid, "typing" if typing else "not typing"))
+
+        # Facebook sends a POST, and indeed a POST makes more sense,
+        # but using GET saves us from sending the fb_dtsg parameter,
+        # which I don't know how to get.
+        resp = requests.get(
+            root + "ajax/messaging/typ.php",
+            cookies = self._cookies(),
+            params = {
+                "__a": "1",
+                "to": str(userid),
+                "thread": str(userid),
+                "typ": "1" if typing else "0"
+            }
+        )
+        assert resp.status_code == requests.codes.ok
+        resp_json = parse_json(resp.text)['payload']
+
+        return resp_json
+
 chat = FacebookChat()
 
 class Commands(cmd.Cmd):
@@ -110,6 +131,18 @@ class Commands(cmd.Cmd):
 
         for id, info in chat.fetchBuddyList().items():
             print("User %s is %s" % (id, info["p"]["status"]))
+
+    def do_typing(self, line):
+        "typing <userid>: notifies the user that you are typing a message."
+        if not self.check_login(): return
+        userid = int(line)
+        chat.notifyTyping(userid, True)
+
+    def do_not_typing(self, line):
+        "not_typing <userid>: notifies the user that you are no longer typing a message."
+        if not self.check_login(): return
+        userid = int(line)
+        chat.notifyTyping(userid, False)
 
     def do_exit(self, _):
         """Exits this script."""

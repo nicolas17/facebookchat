@@ -19,6 +19,9 @@ import sys
 import json
 import cmd
 
+import time
+import random
+
 root = "https://www.facebook.com/"
 
 def removefrombeginning(haystack, needle):
@@ -97,6 +100,37 @@ class FacebookChat:
 
         return resp_json
 
+    def sendMessage(self, recipient, message):
+        print("Sending message to user %d" % recipient)
+
+        timestamp = int(time.time() * 1000)
+        rnd = random.randint(1, 2**32)
+
+        resp = requests.post(
+            root + "ajax/mercury/send_messages.php",
+            cookies = self._cookies(),
+            data = {
+                "message_batch[0][action_type]": "ma-type:user-generated-message",
+                "message_batch[0][author]": "fbid:%d" % self.user_id,
+                "message_batch[0][timestamp]": "%d" % timestamp,
+                "message_batch[0][source]": "source:chat:web",
+                "message_batch[0][body]": message,
+                "message_batch[0][specific_to_list][0]": "fbid:%d" % recipient,
+                "message_batch[0][specific_to_list][1]": "fbid:%d" % self.user_id,
+                "message_batch[0][message_id]": "<%d:%d@mail.projektitan.com>" % (timestamp, rnd),
+                "message_batch[0][client_thread_id]": "user:%d" % recipient,
+                "__a": "1",
+                # Hardcoded value seen in successful requests;
+                # I don't know if it will work for other people or just me
+                "fb_dtsg": "AQF8eBNQ8xA_"
+            }
+        )
+        assert resp.status_code == requests.codes.ok
+        resp_json = parse_json(resp.text)['payload']
+
+        return resp_json
+
+
 chat = FacebookChat()
 
 class Commands(cmd.Cmd):
@@ -143,6 +177,13 @@ class Commands(cmd.Cmd):
         if not self.check_login(): return
         userid = int(line)
         chat.notifyTyping(userid, False)
+
+    def do_send(self, line):
+        "send <userid> <message>: sends a chat message."
+        if not self.check_login(): return
+        userstr, message = line.split(" ", 1)
+        userid = int(userstr)
+        chat.sendMessage(userid, message)
 
     def do_exit(self, _):
         """Exits this script."""

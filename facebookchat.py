@@ -17,6 +17,7 @@
 import requests
 import sys
 import json
+import cmd
 
 root = "https://www.facebook.com/"
 
@@ -28,6 +29,10 @@ def parse_json(string):
     return json.loads(removefrombeginning(string, "for (;;);"))
 
 class FacebookChat:
+    def __init__(self):
+        self.user_id = None
+        self.session_id = None
+
     def _cookies(self):
         return {'c_user': str(self.user_id), 'xs': self.session_id}
 
@@ -57,6 +62,9 @@ class FacebookChat:
             # unexpected code
             raise RuntimeError("Got unexpected code %d" % login_req.status_code)
 
+    def isLoggedIn(self):
+        return self.user_id is not None
+
     def fetchBuddyList(self):
         print("Requesting buddy_list")
         resp = requests.get(
@@ -68,16 +76,40 @@ class FacebookChat:
 
         return resp_json["buddy_list"]["nowAvailableList"]
 
-if len(sys.argv) < 3:
-    print("Usage: %s <email> <password>" % sys.argv[0])
-    sys.exit(1)
-
-_,email,password=sys.argv
-
 chat = FacebookChat()
-if not chat.login(email, password):
-    print("Incorrect email or password")
-    sys.exit(1)
 
-for id, info in chat.fetchBuddyList().items():
-    print("User %s is %s" % (id, info["p"]["status"]))
+class Commands(cmd.Cmd):
+    def do_login(self, line):
+        "login [email [password]]: Logs into facebook."
+        credentials = line.split(" ", 1)
+        if credentials[0] == '':
+            assert sys.version_info.major == 3
+            email = input("Email address: ")
+        else:
+            email = credentials[0]
+        if len(credentials) == 1:
+            import getpass
+            password = getpass.getpass("Password: ")
+        else:
+            password = credentials[1]
+
+        if chat.login(email, password):
+            print("Logged in successfully")
+        else:
+            print("Login error")
+
+    def do_get_buddies(self, line):
+        "Gets a list of online users"
+        if not chat.isLoggedIn():
+            print("Not logged in")
+            return
+
+        for id, info in chat.fetchBuddyList().items():
+            print("User %s is %s" % (id, info["p"]["status"]))
+
+    def do_exit(self, _):
+        """Exits this script."""
+        return True
+
+Commands().cmdloop()
+

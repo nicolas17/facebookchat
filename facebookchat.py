@@ -98,11 +98,15 @@ class Commands(cmd.Cmd):
         else:
             print("Login error")
 
-    def do_get_buddies(self, line):
-        "Gets a list of online users"
+    def check_login(self):
         if not chat.isLoggedIn():
             print("Not logged in")
-            return
+            return False
+        return True
+
+    def do_get_buddies(self, line):
+        "Gets a list of online users"
+        if not self.check_login(): return
 
         for id, info in chat.fetchBuddyList().items():
             print("User %s is %s" % (id, info["p"]["status"]))

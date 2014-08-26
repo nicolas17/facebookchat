@@ -92,17 +92,15 @@ class FacebookChat:
     def notifyTyping(self, userid, typing):
         print("Notifying user %d that we're %s" % (userid, "typing" if typing else "not typing"))
 
-        # Facebook sends a POST, and indeed a POST makes more sense,
-        # but using GET saves us from sending the fb_dtsg parameter,
-        # which I don't know how to get.
-        resp = requests.get(
+        resp = requests.post(
             root + "ajax/messaging/typ.php",
             cookies = self._cookies(),
-            params = {
+            data = {
                 "__a": "1",
                 "to": str(userid),
                 "thread": str(userid),
-                "typ": "1" if typing else "0"
+                "typ": "1" if typing else "0",
+                "fb_dtsg": self.dtsg
             }
         )
         assert resp.status_code == requests.codes.ok

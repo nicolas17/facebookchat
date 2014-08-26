@@ -17,10 +17,12 @@
 import requests
 import sys
 import json
-import cmd
+import re
 
 import time
 import random
+
+import cmd
 
 root = "https://www.facebook.com/"
 
@@ -35,6 +37,7 @@ class FacebookChat:
     def __init__(self):
         self.user_id = None
         self.session_id = None
+        self.dtsg = None
 
     def _cookies(self):
         return {'c_user': str(self.user_id), 'xs': self.session_id}
@@ -60,6 +63,7 @@ class FacebookChat:
             # we got redirected to the main facebook website
             self.user_id = int(login_req.cookies['c_user'])
             self.session_id = login_req.cookies['xs']
+            self.dtsg = self._fetchDtsg()
             return True
         else:
             # unexpected code
@@ -67,6 +71,12 @@ class FacebookChat:
 
     def isLoggedIn(self):
         return self.user_id is not None
+
+    def _fetchDtsg(self):
+        print("Requesting DTSG")
+        resp = requests.get(root, cookies = self._cookies())
+        m = re.search('<input type="hidden" name="fb_dtsg" value="([^"]+)" autocomplete="off" />', resp.text)
+        return m.group(1)
 
     def fetchBuddyList(self):
         print("Requesting buddy_list")
@@ -120,9 +130,7 @@ class FacebookChat:
                 "message_batch[0][message_id]": "<%d:%d@mail.projektitan.com>" % (timestamp, rnd),
                 "message_batch[0][client_thread_id]": "user:%d" % recipient,
                 "__a": "1",
-                # Hardcoded value seen in successful requests;
-                # I don't know if it will work for other people or just me
-                "fb_dtsg": "AQF8eBNQ8xA_"
+                "fb_dtsg": self.dtsg
             }
         )
         assert resp.status_code == requests.codes.ok

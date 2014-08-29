@@ -19,6 +19,7 @@ import sys
 import json
 import re
 
+import datetime
 import time
 import random
 
@@ -136,6 +137,20 @@ class FacebookChat:
 
         return resp_json
 
+    def getMessages(self, userid, offset, limit):
+        print("Getting %d messages starting on #%d from user %d" % (limit, offset, userid))
+        resp = requests.post(
+            "https://www.facebook.com/ajax/mercury/thread_info.php",
+            cookies = self._cookies(),
+            data = {
+                "messages[user_ids][%d][offset]" % userid: "%d" % offset,
+                "messages[user_ids][%d][limit]"  % userid: "%d" % limit,
+                "__a": "1",
+                "fb_dtsg": self.dtsg
+            }
+        )
+        resp_json = parse_json(resp.text)['payload']
+        return resp_json['actions']
 
 class Commands(cmd.Cmd):
     def do_login(self, line):
@@ -188,6 +203,16 @@ class Commands(cmd.Cmd):
         userstr, message = line.split(" ", 1)
         userid = int(userstr)
         chat.sendMessage(userid, message)
+
+    def do_get_last_messages(self, line):
+        "get_last_messages <userid>: get the last 20 messages in the conversation with <userid>"
+        if not self.check_login(): return
+        userid = int(line)
+        for msg in chat.getMessages(userid, 0, 20):
+            timestamp = datetime.datetime.fromtimestamp(msg["timestamp"]/1000)
+            sender = msg["author"]
+            message = msg["body"]
+            print("%s <%s> %s" % (timestamp.strftime("[%x] [%X]"), sender, message))
 
     def do_exit(self, _):
         """Exits this script."""

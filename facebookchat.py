@@ -137,8 +137,6 @@ class FacebookChat:
         return resp_json
 
 
-chat = FacebookChat()
-
 class Commands(cmd.Cmd):
     def do_login(self, line):
         "login [email [password]]: Logs into facebook."
@@ -194,6 +192,8 @@ class Commands(cmd.Cmd):
     def do_exit(self, _):
         """Exits this script."""
         return True
+
+chat = FacebookChat()
 
 Commands().cmdloop()
 

@@ -150,7 +150,10 @@ class FacebookChat:
             }
         )
         resp_json = parse_json(resp.text)['payload']
-        return resp_json['actions']
+        if 'actions' not in resp_json:
+            return None
+        else:
+            return resp_json['actions']
 
 class Commands(cmd.Cmd):
     def do_login(self, line):
@@ -208,11 +211,15 @@ class Commands(cmd.Cmd):
         "get_last_messages <userid>: get the last 20 messages in the conversation with <userid>"
         if not self.check_login(): return
         userid = int(line)
-        for msg in chat.getMessages(userid, 0, 20):
-            timestamp = datetime.datetime.fromtimestamp(msg["timestamp"]/1000)
-            sender = msg["author"]
-            message = msg["body"]
-            print("%s <%s> %s" % (timestamp.strftime("[%x] [%X]"), sender, message))
+        messages = chat.getMessages(userid, 0, 20)
+        if messages is None:
+            print("There are no messages")
+        else:
+            for msg in messages:
+                timestamp = datetime.datetime.fromtimestamp(msg["timestamp"]/1000)
+                sender = msg["author"]
+                message = msg["body"]
+                print("%s <%s> %s" % (timestamp.strftime("[%x] [%X]"), sender, message))
 
     def do_exit(self, _):
         """Exits this script."""

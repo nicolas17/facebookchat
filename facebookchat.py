@@ -25,6 +25,10 @@ import random
 
 import cmd
 
+import locale
+# workaround for an apparent Python bug
+locale.setlocale(locale.LC_ALL, locale.getlocale())
+
 root = "https://www.facebook.com/"
 
 def removefrombeginning(haystack, needle):
